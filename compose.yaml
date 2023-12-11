@@ -98,6 +98,7 @@ services:
       - --metrics.port=8008
     volumes:
       - ./el-cl-genesis-data:/el-cl-genesis-data
+      - ./consensus-data:/consensus-data 
     ports:
       - "8282:5042"
       - "8284:8008"
