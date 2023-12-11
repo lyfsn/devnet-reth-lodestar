@@ -91,7 +91,7 @@ services:
       - --paramsFile=/el-cl-genesis-data/custom_config_data/config.yaml 
       - --beaconNodes=http://beacon:4000 
       - --externalSigner.url=http://88.99.94.109:49400
-      - --externalSigner.fetch=http://88.99.94.109:49400/api/v1/eth2/publicKeys
+      - --externalSigner.fetch=true
       - --suggestedFeeRecipient=0x8943545177806ED17B9F23F0a21ee5948eCaa776 
       - --metrics 
       - --metrics.address=0.0.0.0 
