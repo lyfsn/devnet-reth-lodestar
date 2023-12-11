@@ -1,0 +1,106 @@
+version: "3.8"
+
+services:
+  execution:
+    image: ghcr.io/paradigmxyz/reth:latest
+    command:
+      - node
+      - -vvv
+      - --datadir=/execution-data
+      - --chain=/el-cl-genesis-data/custom_config_data/genesis.json
+      - --addr=0.0.0.0
+      - --port=50403
+      - --discovery.port=50403
+      - --discovery.addr=0.0.0.0
+      - --http
+      - --http.port=8545
+      - --http.addr=0.0.0.0
+      - --http.corsdomain=*
+      - --http.api=admin,net,eth,web3,debug,trace
+      - --ws
+      - --ws.addr=0.0.0.0
+      - --ws.port=8546
+      - --ws.api=net,eth
+      - --ws.origins=*
+      - --nat=extip:${IP_ADDRESS}
+      - --authrpc.port=8551
+      - --authrpc.jwtsecret=/el-cl-genesis-data/jwt/jwtsecret
+      - --authrpc.addr=0.0.0.0
+      - --metrics=0.0.0.0:9001
+      - --bootnodes=enode://30674d1f5fa3cf763c2d991eeaf585db42c45737a4d47aee3653b50ac33947437769e13f04c12bab63d5c2a416d08b2637e6340d13b7d59489f0ac8dae919756@88.99.94.109:50303
+      - --trusted-peers=enode://30674d1f5fa3cf763c2d991eeaf585db42c45737a4d47aee3653b50ac33947437769e13f04c12bab63d5c2a416d08b2637e6340d13b7d59489f0ac8dae919756@88.99.94.109:50303
+    volumes:
+      - ./execution-data:/execution-data
+      - ./el-cl-genesis-data:/el-cl-genesis-data
+    ports:
+      - "11845:8545" 
+      - "11846:8546" 
+      - "11851:8551" 
+      - "9081:9001" 
+      - "40803:50403"
+    restart: unless-stopped
+
+  beacon:
+    image: chainsafe/lodestar:latest
+    command:
+      - beacon 
+      - --logLevel=info
+      - --port=9000
+      - --discoveryPort=9000
+      - --dataDir=/consensus-data
+      - --paramsFile=/el-cl-genesis-data/custom_config_data/config.yaml
+      - --genesisStateFile=/el-cl-genesis-data/custom_config_data/genesis.ssz
+      - --eth1.depositContractDeployBlock=0
+      - --network.connectToDiscv5Bootnodes=true
+      - --discv5=true
+      - --eth1=true
+      - --eth1.providerUrls=http://execution:8545
+      - --execution.urls=http://execution:8551
+      - --rest=true
+      - --rest.address=0.0.0.0
+      - --rest.namespace=*
+      - --rest.port=4000
+      - --nat=true
+      - --enr.ip=${IP_ADDRESS}
+      - --enr.tcp=9000
+      - --enr.udp=9000
+      - --subscribeAllSubnets=true
+      - --jwt-secret=/el-cl-genesis-data/jwt/jwtsecret
+      - --metrics
+      - --metrics.address=0.0.0.0
+      - --metrics.port=8008
+      - --bootnodes=enr:-MS4QKjvQWjHjNSlrgJBnwI7j88ULp36kH6FegWreBuiHL0_UGs4EvAxALKLgvKjTFpk6x0zTPyxoXXt0PDeZxlAihgBh2F0dG5ldHOIAAAAAAAAAACEZXRoMpAjvkwgQAAAOP__________gmlkgnY0gmlwhFhjXm2EcXVpY4Iq-YlzZWNwMjU2azGhAoNhfDA57peBhfKlgRRDYKmjwOUPSPqj97hpWmwycgJdiHN5bmNuZXRzAIN0Y3CCKviDdWRwgir4
+    volumes:
+      - ./consensus-data:/consensus-data 
+      - ./el-cl-genesis-data:/el-cl-genesis-data
+    ports:
+      - "11800:9000"
+      - "4980:4000"
+      - "7484:8008"
+    depends_on:
+      - execution
+    restart: unless-stopped
+
+  validator:
+    image: chainsafe/lodestar:latest
+    user: "root"
+    command:
+      - validator
+      - --logLevel=info 
+      - --dataDir=/consensus-data/validator 
+      - --paramsFile=/el-cl-genesis-data/custom_config_data/config.yaml 
+      - --beaconNodes=http://beacon:4000 
+      - --externalSigner.url=http://88.99.94.109:49400
+      - --externalSigner.pubkeys=http://88.99.94.109:49400/api/v1/eth2/publicKeys
+      - --suggestedFeeRecipient=0x8943545177806ED17B9F23F0a21ee5948eCaa776 
+      - --metrics 
+      - --metrics.address=0.0.0.0 
+      - --metrics.port=8008
+    volumes:
+      - ./el-cl-genesis-data:/el-cl-genesis-data
+    ports:
+      - "8282:5042"
+      - "8284:8008"
+    depends_on:
+      - beacon
+    restart: unless-stopped
